@@ -1,0 +1,113 @@
+![とある錬金術師の万能薬(Elixir)](http://to-a.ru/qEBFHW/img1 "title_logo")
+
+#Goal
+mixで使える自分用のコマンドを作成する。
+
+#Dev-Environment
+OS: Windows8.1
+Erlang: Eshell V6.4, OTP-Version 17.5
+Elixir: v1.0.4
+
+#Wait a minute
+mixで使える自分用のコマンド(カスタムタスク)を作成します。
+
+今回は、以下の部分のみに注力します。
+
+mix helpから見れる -> コマンドを実行する -> 結果が表示される
+
+詳細な内部での処理については、別の記事を上げます。
+
+#Index
+My mix command
+|> Preparation
+|> Creating a Command
+|> Let's run
+
+##Preparation
+プロジェクトの作成を行います。
+
+```cmd
+>mix new my_mix_cmd
+>cd my_mix cmd
+>mix test
+```
+
+また、以下のようなディレクトリ構造とファイルの配置をして下さい。
+(Phoenix-Frameworkのディレクトリ構造に習います)
+
+ファイル: lib/mix/tasks/sample.ex
+
+##Creating a Command
+それではコマンドとなるモジュールを作成していきます。
+
+####ファイル: lib/mix/tasks/sample.ex
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+
+  @shortdoc "My mix command sample"
+
+  def run(args) do
+    IO.puts (inspect args)
+  end
+end
+```
+
+コマンドの実行時に受け取った引数をただ表示するだけのコマンドです。
+@shortdocを入れておくとhelpから説明が見れます。
+
+##Let's run
+それでは実行してみましょう！
+
+まずは、mix helpに表示されるか見てみます。
+
+```cmd
+>mix help
+mix                   # Run the default task (current: mix run)
+...
+mix sample            # My mix command sample
+...
+```
+
+出ましたね。@shortdocの説明も表示されています。
+
+次は実行してみましょう。
+
+```cmd
+>mix sample
+[]
+
+```
+
+空リストが表示されてますね。
+引数は、空リストとして扱われているということでしょう。
+
+それを確認するために引数を入力してみます。
+
+```cmd
+>mix Sample hoge huge foo:bar
+["hoge", "huge", "foo:bar"]
+```
+
+よし、予想通りですね。
+
+#Speaking to oneself
+今回はここまで、色々と使える関数とかあるみたいなんですけど、
+今のところは調べきれていないので、少し待ってください。
+
+シンプルな例としては、
+Phoenix-Frameworkの「mix phoenix.routes」のソースコードを参考にするとシンプルで分かりやすいです。
+
+後は、[@ma2ge](https://twitter.com/ma2ge)氏が作成しているパンくずライブラリのコミット内容が参考になります。
+参考: [Github - ma2gedev/breadcrumble_ex implement generator for the Phoenix application](https://github.com/ma2gedev/breadcrumble_ex/commit/369424969d38bfc8ee7c4d929a98c8372ceceeb3)
+
+[@ma2ge](https://twitter.com/ma2ge)氏、参考にさせて頂きましたm(＿ ＿)m
+
+もう一つ、もっと説明が欲しいと言う方は以下のリンク先が参考になります。(ちょっと古い？)
+参考: [A Custom Mix Task for Phoenix App](http://learnelixir.com/blog/2014/11/04/custom-mix-task-for-phoenix-app/)
+
+#Bibliography
+[hexdocs - v1.0.5 Elixir Mix.Task](http://elixir-lang.org/docs/v1.0/mix/Mix.Task.html)
+[Github - ma2gedev/breadcrumble_ex implement generator for the Phoenix application](https://github.com/ma2gedev/breadcrumble_ex/commit/369424969d38bfc8ee7c4d929a98c8372ceceeb3)
+[A Custom Mix Task for Phoenix App](http://learnelixir.com/blog/2014/11/04/custom-mix-task-for-phoenix-app/)

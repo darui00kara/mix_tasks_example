@@ -1,0 +1,394 @@
+![とある錬金術師の万能薬(Elixir)](http://to-a.ru/qEBFHW/img1 "title_logo")
+
+#Goal
+ファイルの自動生成を行うカスタムタスクを作成する。
+
+#Dev-Environment
+OS: Windows8.1
+Erlang: Eshell V6.4, OTP-Version 17.5
+Elixir: v1.0.4
+
+#Wait a minute
+mixで使える自分用のコマンド(カスタムタスク)を作成します。
+
+おまけにて、大体どのドキュメントを見ればいいか簡単にまとめてます。
+
+#Index
+My mix command
+|> Preparation
+|> Automatic generation of file
+|> Extra
+
+##Preparation
+準備は以下の記事を見て下さい。
+参考: [Mixのカスタムタスクを作成](http://daruiapprentice.blogspot.jp/2015/08/elixir-my-mix-command.html)
+
+##Automatic generation of file
+mixのコマンドからファイルの自動生成を行うカスタムタスクを作成します。
+
+####ファイル: lib/mix/tasks/sample.ex
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+  import Mix.Generator
+
+  @shortdoc "My custom task sample"
+
+  def run(_args) do
+    app_module = Mix.Project.config[:app] |> Atom.to_string |> Mix.Utils.camelize
+    assigns = [app_module: app_module]
+
+    # template
+    create_file(
+      Path.join(["lib", "test_template.ex"]) |> Path.relative_to(Mix.Project.app_path),
+      test_template(assigns))
+
+    # text
+    create_file(
+      Path.join(["lib", "test.ex"]) |> Path.relative_to(Mix.Project.app_path),
+      test_text)
+  end
+
+  # template
+  embed_template :test, """
+  defmodule <%= @app_module %>.Test do
+  end
+  """
+
+  # text
+  embed_text :test, """
+  defmodule MyMixCmd.Test do
+  end
+  """
+end
+```
+
+Result:
+
+```elixir
+>mix sample
+* creating lib/test_template.ex
+* creating lib/test.ex
+```
+
+Description:
+
+####・embed_template/2
+渡している引数内の@app_module部分は、
+アプリケーション名に変換されて出力されています。
+
+Phoenix-Frameworkでよく使う、
+.html.eexの埋め込みコードのようなことをやっていますね。
+
+正しいです。
+実際にこれEExの機能です。
+
+####・embed_text/2
+渡している引数の通り出力されていますね。
+
+##Extra
+mixのモジュールと関数を簡単に把握します。
+
+####・[Mix](http://elixir-lang.org/docs/v1.0/mix/Mix.html)
+皆さんご存知のmixです。
+
+mixは、Elixirプロジェクトの作成、コンパイル、テストをするためのタスク、
+それとハンドルの依存関係の機能を提供する総合的なビルドツールです。
+
+素晴らしいですね～開発が捗ります＞＜
+
+とりあえず、raise/1の例だけ記述しておきます。
+
+Example:
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+
+  @shortdoc "My custom task sample"
+
+  def run(_args) do
+    Mix.raise "raise"
+  end
+end
+```
+
+Result:
+
+```cmd
+>mix sample
+** (Mix) raise
+```
+
+####・[Mix.Task](http://elixir-lang.org/docs/v1.0/mix/Mix.Task.html)
+作成、ロード及びタスクを操作するための便利な機能を提供する単純なモジュールです。
+
+useして使っているインターフェース(behaviour)ですね。
+
+前回の記事で、このインターフェースのrun/2を実装しています。
+後は・・・shortdoc/1もこのインターフェースにある関数ですね。
+
+Example:
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+
+  @shortdoc "My custom task sample"
+
+  def run(args) do
+    IO.puts (inspect args)
+  end
+end
+```
+
+####・[Mix.Shell.IO](http://elixir-lang.org/docs/v1.0/mix/Mix.Shell.IO.html)
+mixのデフォルトのシェルです。
+単純にstdioとstderrにメッセージを出力します。
+
+ソースコードを見てみると、
+[Mix.Shell](http://elixir-lang.org/docs/v1.0/mix/Mix.Shell.html)インターフェース(behaviour)を実装しているようです。
+
+おそらく・・・cmd/2、error/1、info/1あたりは割と利用頻度が高いのではないかと予想。
+
+例としてcmd/2も使いたかったのですが・・・使い方が分かりませんでした。
+
+Example:
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+
+  @shortdoc "My custom task sample"
+
+  def run(_args) do
+    Mix.Shell.IO.info("info")
+    Mix.Shell.IO.error("error")
+  end
+end
+```
+
+Result:
+
+```cmd
+>mix sample
+info
+error
+```
+
+####・[Mix.Project](http://elixir-lang.org/docs/v1.0/mix/Mix.Project.html)
+Mixプロジェクトの定義と操作をします。
+プロジェクトの情報を取得する際に役に立ちそうですね。
+
+使い方についてはドキュメントを見れば大体分かります。
+
+####ファイル: mix.exs
+モジュールでuseしてますね。
+
+```elixir
+defmodule MyMixCmd.Mixfile do
+  use Mix.Project
+
+  def project do
+    [app: :my_mix_cmd,
+     version: "0.0.1",
+     elixir: "~> 1.0",
+     build_embedded: Mix.env == :prod,
+     start_permanent: Mix.env == :prod,
+     deps: deps]
+  end
+
+  ...
+
+end
+```
+
+Example:
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+
+  @shortdoc "My custom task sample"
+
+  def run(_args) do
+    IO.inspect Mix.Project.app_path
+    IO.inspect Mix.Project.build_path
+    IO.inspect Mix.Project.config
+  end
+end
+```
+
+Result:
+
+```elixir
+>mix sample
+"c:/MyWorkSpaces/darui_works_local/elixir_space/my_mix_cmd/_build/dev/lib/my_mix_cmd"
+"c:/MyWorkSpaces/darui_works_local/elixir_space/my_mix_cmd/_build/dev"
+[app: :my_mix_cmd, version: "0.0.1", elixir: "~> 1.0", build_embedded: false,
+ start_permanent: false, deps: [], aliases: [], build_per_environment: true,
+ default_task: "run", deps_path: "deps", elixirc_paths: ["lib"],
+ erlc_paths: ["src"], erlc_include_path: "include", erlc_options: [:debug_info],
+ lockfile: "mix.lock", preferred_cli_env: []]
+```
+
+####・[Mix.Config](http://elixir-lang.org/docs/v1.0/mix/Mix.Config.html)
+定義するためのモジュールへ、アプリケーションの設定の読み込みとマージをします。
+最も一般的には、このモジュールは、独自の構成を定義するために使用されます。
+
+これの使い方としては、config/config.exsを見るのが手っ取り早いですね。
+丁寧に使い方のサンプルが書いてありますので・・・
+
+####・[Mix.Utils](http://elixir-lang.org/docs/v1.0/mix/Mix.Utils.html)
+そのまんまですね。mixとタスク全体で使用するユーティリティです。
+
+便利そうな関数があります。
+幾つか使ってみます。
+
+Example:
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+
+  @shortdoc "My custom task sample"
+
+  def run(_args) do
+    IO.inspect Mix.Utils.camelize("foo_bar")
+    IO.inspect Mix.Utils.command_to_module_name("sample")
+    IO.inspect Mix.Utils.module_name_to_command(Mix.Tasks.Sample, 2)
+    IO.inspect Mix.Utils.mix_home()
+    IO.inspect Mix.Utils.mix_paths()
+  end
+end
+```
+
+Result:
+
+```elixir
+>mix sample
+"FooBar"
+"Sample"
+"sample"
+"c:/Users/user_name/.mix"
+[]
+```
+
+####・[Mix.Generator](http://elixir-lang.org/docs/v1.0/mix/Mix.Generator.html)
+コンテンツのパスと生成の作業に便利。
+これらの機能の全ては、ある意味で、彼らはMix.shellを介して実行するアクションを記録し、冗長です。
+(説明が上手く翻訳できない！！)
+
+ファイルやディレクトリの作成ができるのと、
+生成するファイルに対してテキストやテンプレートの埋め込みができるようです。
+
+テキストの例。
+
+Example:
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+  import Mix.Generator
+
+  @shortdoc "My custom task sample"
+
+  def run(_args) do
+    create_file(
+      Path.join(["lib", "test.ex"]) |> Path.relative_to(Mix.Project.app_path),
+      test_text)
+  end
+
+  embed_text :test, """
+  defmodule MyMixCmd.Test do
+  end
+  """
+end
+```
+
+Description:
+さて、どうやって動作しているのかさっぱりです・・・
+ですが、分かったことが一つだけあります。
+
+embed_text/2の内部で:testの部分は、:test_textに変換されているようです。
+そして、create_file/3の引数でtest_textを渡しています。
+
+test_textは、別にどこかで定義したわけでもありません。
+実際に、test_textのアンダースコア以降を変更するとコンパイルエラーで動かなくなります。
+
+ソースコードを見る限りは、
+Elixirのメタプログラミングを習得しないと分からないと思います。
+
+動作はさせられるので、とりあえずはいいでしょう。
+
+Result:
+
+```cmd
+>mix sample
+* creating lib/test.ex
+
+>mix sample
+* creating lib/test.ex
+lib/test.ex already exists, overwrite? [Yn] y
+```
+
+Description:
+既に同名ファイルが存在する場合、
+上書きしていいか聞いてくれます。
+
+ファイルの内容を見てみるとembed_text/2で渡している引数の内容が出力されていますね。
+
+さてさて、もう一つ例を書いておきます。
+テンプレートの例。
+
+Example:
+
+```elixir
+defmodule Mix.Tasks.Sample do
+  use Mix.Task
+  import Mix.Generator
+
+  @shortdoc "My custom task sample"
+
+  def run(_args) do
+    app_module = Mix.Project.config[:app] |> Atom.to_string |> Mix.Utils.camelize
+    assigns = [app_module: app_module]
+
+    # template
+    create_file(
+      Path.join(["lib", "test_template.ex"]) |> Path.relative_to(Mix.Project.app_path),
+      test_template(assigns))
+  end
+
+  # template
+  embed_template :test, """
+  defmodule <%= @app_module %>.Test do
+  end
+  """
+end
+```
+
+Result:
+
+```cmd
+>mix sample
+* creating lib/test_template.ex
+```
+
+#Speaking to oneself
+Mix.Generator.embed_template/2を使う場合、
+Mix.Generator.create_file/3の第二引数に渡す値がさっぱり分からなかった。
+
+お陰様で大分時間を消費してしまった。
+
+#Bibliography
+[Github - ma2gedev/breadcrumble_ex implement generator for the Phoenix application](https://github.com/ma2gedev/breadcrumble_ex/commit/369424969d38bfc8ee7c4d929a98c8372ceceeb3)
+[A Custom Mix Task for Phoenix App](http://learnelixir.com/blog/2014/11/04/custom-mix-task-for-phoenix-app/)
+[hexdocs - v1.0.5 Elixir Mix](http://elixir-lang.org/docs/v1.0/mix/Mix.html)
+[hexdocs - v1.0.5 Elixir Mix.Task](http://elixir-lang.org/docs/v1.0/mix/Mix.Task.html)
+[hexdocs - v1.0.5 Elixir Mix.Shell.IO](http://elixir-lang.org/docs/v1.0/mix/Mix.Shell.IO.html)
+[hexdocs - v1.0.5 Elixir Mix.Generator](http://elixir-lang.org/docs/v1.0/mix/Mix.Generator.html)
+[hexdocs - v1.0.5 Elixir Mix.Utils](http://elixir-lang.org/docs/v1.0/mix/Mix.Utils.html)
+[hexdocs - v1.0.5 Elixir Mix.Project](http://elixir-lang.org/docs/v1.0/mix/Mix.Project.html)
+[hexdocs - v1.0.5 Elixir Mix.Config](http://elixir-lang.org/docs/v1.0/mix/Mix.Config.html)
